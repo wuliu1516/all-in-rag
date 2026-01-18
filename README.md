@@ -180,6 +180,14 @@ all-in-rag/
 
 ### 第十章 项目二：
 
+## 系统软件安装
+```
+sudo apt-get install -y poppler-utils
+sudo apt-get install -y tesseract-ocr
+# 如果需要中文包
+sudo apt-get install -y tesseract-ocr-chi-sim
+```
+
 ## 致谢
 
 **核心贡献者**

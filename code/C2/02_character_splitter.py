@@ -20,4 +20,4 @@ print("--- 前5个块内容示例 ---")
 for i, chunk in enumerate(chunks[:5]):
     print("=" * 60)
     # chunk 是一个 Document 对象，需要访问它的 .page_content 属性来获取文本
-    print(f'块 {i+1} (长度: {len(chunk.page_content)}): "{chunk.page_content}"')
+    print(f'块 {i+1} (长度: {len(chunk.page_content)}): \n"{chunk.page_content}"')

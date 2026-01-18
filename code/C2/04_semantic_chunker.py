@@ -3,15 +3,13 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.document_loaders import TextLoader
 
 embeddings = HuggingFaceEmbeddings(
-    model_name="BAAI/bge-small-zh-v1.5",
-    model_kwargs={'device': 'cpu'},
-    encode_kwargs={'normalize_embeddings': True}
+    model_name="BAAI/bge-small-zh-v1.5", model_kwargs={"device": "cpu"}, encode_kwargs={"normalize_embeddings": True}
 )
 
 # 初始化 SemanticChunker
 text_splitter = SemanticChunker(
     embeddings,
-    breakpoint_threshold_type="percentile" # 也可以是 "standard_deviation", "interquartile", "gradient"
+    breakpoint_threshold_type="standard_deviation",  # 可以是 "percentile" "standard_deviation", "interquartile", "gradient"
 )
 
 loader = TextLoader("../../data/C2/txt/蜂医.txt", encoding="utf-8")
