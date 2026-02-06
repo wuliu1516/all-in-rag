@@ -1,17 +1,29 @@
 import json
 import os
+
 import numpy as np
 import torch
-from transformers import AutoModel, AutoProcessor
-from sklearn.feature_extraction.text import TfidfVectorizer
+from pymilvus import (
+    AnnSearchRequest,
+    Collection,
+    CollectionSchema,
+    DataType,
+    FieldSchema,
+    MilvusClient,
+    RRFRanker,
+    WeightedRanker,
+    connections,
+)
 from scipy.sparse import csr_matrix
-from pymilvus import connections, MilvusClient, FieldSchema, CollectionSchema, DataType, Collection, AnnSearchRequest, RRFRanker
+from sklearn.feature_extraction.text import TfidfVectorizer
+from transformers import AutoModel, AutoProcessor
 
 # 1. 初始化设置
 COLLECTION_NAME = "dragon_siglip_demo"
 MILVUS_URI = "http://localhost:19530"  # 服务器模式
 DATA_PATH = "../../data/C4/metadata/dragon.json"  # 相对路径
 BATCH_SIZE = 50
+
 
 # 2. 自定义SigLIP嵌入函数类
 class SigLIPEmbeddingFunction:
@@ -24,95 +36,88 @@ class SigLIPEmbeddingFunction:
         """
         self.model_name = model_name
         self.device = device
-        
+
         print(f"--> 正在加载 SigLIP 模型: {model_name}")
         self.model = AutoModel.from_pretrained(model_name)
         self.processor = AutoProcessor.from_pretrained(model_name)
         self.model.to(device)
         self.model.eval()
-        
+
         # 初始化TF-IDF作为稀疏向量生成器
         self.tfidf_vectorizer = TfidfVectorizer(
-            max_features=10000,  # 限制词汇表大小以节省空间
-            stop_words='english',
-            ngram_range=(1, 2)
+            max_features=10000, stop_words="english", ngram_range=(1, 2)  # 限制词汇表大小以节省空间
         )
         self.tfidf_fitted = False
-        
+
         # 获取文本编码器的输出维度
         with torch.no_grad():
             dummy_text = ["test"]
             inputs = self.processor(text=dummy_text, padding="max_length", return_tensors="pt")
-            outputs = self.model.text_model(**{k: v.to(device) for k, v in inputs.items() if k != 'pixel_values'})
+            outputs = self.model.text_model(**{k: v.to(device) for k, v in inputs.items() if k != "pixel_values"})
             self.dense_dim = outputs.pooler_output.shape[-1]
-        
+
         print(f"--> SigLIP 模型加载完成。密集向量维度: {self.dense_dim}")
-    
+
     @property
     def dim(self):
         """返回维度信息，兼容原BGE-M3接口"""
-        return {
-            "dense": self.dense_dim,
-            "sparse": self.tfidf_vectorizer.max_features if self.tfidf_fitted else 10000
-        }
-    
+        return {"dense": self.dense_dim, "sparse": self.tfidf_vectorizer.max_features if self.tfidf_fitted else 10000}
+
     def fit_sparse(self, docs):
         """拟合稀疏向量模型（TF-IDF）"""
         print("--> 正在拟合 TF-IDF 模型...")
         self.tfidf_vectorizer.fit(docs)
         self.tfidf_fitted = True
         print(f"--> TF-IDF 模型拟合完成。词汇表大小: {len(self.tfidf_vectorizer.vocabulary_)}")
-    
+
     def encode_text_dense(self, texts):
         """使用SigLIP编码文本为密集向量"""
         if isinstance(texts, str):
             texts = [texts]
-        
+
         dense_vectors = []
         batch_size = 8  # 减小批次大小以节省内存
-        
+
         with torch.no_grad():
             for i in range(0, len(texts), batch_size):
-                batch_texts = texts[i:i + batch_size]
+                batch_texts = texts[i : i + batch_size]
                 inputs = self.processor(text=batch_texts, padding="max_length", truncation=True, return_tensors="pt")
-                inputs = {k: v.to(self.device) for k, v in inputs.items() if k != 'pixel_values'}
-                
+                inputs = {k: v.to(self.device) for k, v in inputs.items() if k != "pixel_values"}
+
                 outputs = self.model.text_model(**inputs)
                 embeddings = outputs.pooler_output
-                
+
                 # 归一化向量
                 embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
                 dense_vectors.extend(embeddings.cpu().numpy())
-        
+
         return np.array(dense_vectors)
-    
+
     def encode_text_sparse(self, texts):
         """使用TF-IDF编码文本为稀疏向量"""
         if not self.tfidf_fitted:
             raise ValueError("请先调用 fit_sparse() 方法拟合TF-IDF模型")
-        
+
         if isinstance(texts, str):
             texts = [texts]
-        
+
         sparse_matrix = self.tfidf_vectorizer.transform(texts)
         return sparse_matrix
-    
+
     def __call__(self, texts):
         """主调用方法，返回密集和稀疏向量"""
         if isinstance(texts, str):
             texts = [texts]
-        
+
         # 如果还没有拟合稀疏模型，先拟合
         if not self.tfidf_fitted:
             self.fit_sparse(texts)
-        
+
         dense_vectors = self.encode_text_dense(texts)
         sparse_vectors = self.encode_text_sparse(texts)
-        
-        return {
-            "dense": dense_vectors,
-            "sparse": sparse_vectors
-        }
+
+        return {"dense": dense_vectors, "sparse": sparse_vectors}
+
 
 # 3. 连接 Milvus 并初始化嵌入模型
 print(f"--> 正在连接到 Milvus: {MILVUS_URI}")
@@ -137,7 +142,7 @@ fields = [
     FieldSchema(name="location", dtype=DataType.VARCHAR, max_length=128),
     FieldSchema(name="environment", dtype=DataType.VARCHAR, max_length=64),
     FieldSchema(name="sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR),
-    FieldSchema(name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=ef.dim["dense"])
+    FieldSchema(name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=ef.dim["dense"]),
 ]
 
 # 如果集合不存在，则创建它及索引
@@ -165,24 +170,24 @@ collection.load()
 print(f"--> Collection '{COLLECTION_NAME}' 已加载到内存。")
 
 if collection.is_empty:
-    print(f"--> Collection 为空，开始插入数据...")
+    print("--> Collection 为空，开始插入数据...")
     if not os.path.exists(DATA_PATH):
         raise FileNotFoundError(f"数据文件未找到: {DATA_PATH}")
-    with open(DATA_PATH, 'r', encoding='utf-8') as f:
+    with open(DATA_PATH, "r", encoding="utf-8") as f:
         dataset = json.load(f)
 
     docs, metadata = [], []
     for item in dataset:
         parts = [
-            item.get('title', ''),
-            item.get('description', ''),
-            item.get('location', ''),
-            item.get('environment', ''),
+            item.get("title", ""),
+            item.get("description", ""),
+            item.get("location", ""),
+            item.get("environment", ""),
             # *item.get('combat_details', {}).get('combat_style', []),
             # *item.get('combat_details', {}).get('abilities_used', []),
             # item.get('scene_info', {}).get('time_of_day', '')
         ]
-        docs.append(' '.join(filter(None, parts)))
+        docs.append(" ".join(filter(None, parts)))
         metadata.append(item)
     print(f"--> 数据加载完成，共 {len(docs)} 条。")
 
@@ -199,11 +204,11 @@ if collection.is_empty:
     categories = [doc["category"] for doc in metadata]
     locations = [doc["location"] for doc in metadata]
     environments = [doc["environment"] for doc in metadata]
-    
+
     # 获取向量 - 注意SigLIP返回的格式与BGE-M3不同
     sparse_vectors = []
     dense_vectors = embeddings["dense"].tolist()
-    
+
     # 将稀疏矩阵转换为Milvus可接受的格式
     sparse_matrix = embeddings["sparse"]
     for i in range(sparse_matrix.shape[0]):
@@ -213,20 +218,12 @@ if collection.is_empty:
         for j in range(row.nnz):
             sparse_dict[row.indices[j]] = float(row.data[j])
         sparse_vectors.append(sparse_dict)
-    
+
     # 插入数据
-    collection.insert([
-        img_ids,
-        paths,
-        titles,
-        descriptions,
-        categories,
-        locations,
-        environments,
-        sparse_vectors,
-        dense_vectors
-    ])
-    
+    collection.insert(
+        [img_ids, paths, titles, descriptions, categories, locations, environments, sparse_vectors, dense_vectors]
+    )
+
     collection.flush()
     print(f"--> 数据插入完成，总数: {collection.num_entities}")
 else:
@@ -263,7 +260,7 @@ print(f"稀疏向量非零元素数量: {sparse_row.nnz}")
 print("稀疏向量前5个非零元素:")
 for i, (idx, val) in enumerate(list(sparse_dict.items())[:5]):
     print(f"  - 索引: {idx}, 值: {val:.4f}")
-density = (sparse_row.nnz / sparse_matrix.shape[1] * 100)
+density = sparse_row.nnz / sparse_matrix.shape[1] * 100
 print(f"\n稀疏向量密度: {density:.8f}%")
 
 # 定义搜索参数
@@ -277,7 +274,7 @@ dense_results = collection.search(
     param=search_params,
     limit=top_k,
     expr=search_filter,
-    output_fields=["title", "path", "description", "category", "location", "environment"]
+    output_fields=["title", "path", "description", "category", "location", "environment"],
 )[0]
 
 for i, hit in enumerate(dense_results):
@@ -292,7 +289,7 @@ sparse_results = collection.search(
     param=search_params,
     limit=top_k,
     expr=search_filter,
-    output_fields=["title", "path", "description", "category", "location", "environment"]
+    output_fields=["title", "path", "description", "category", "location", "environment"],
 )[0]
 
 for i, hit in enumerate(sparse_results):
@@ -313,7 +310,7 @@ results = collection.hybrid_search(
     [sparse_req, dense_req],
     rerank=rerank,
     limit=top_k,
-    output_fields=["title", "path", "description", "category", "location", "environment"]
+    output_fields=["title", "path", "description", "category", "location", "environment"],
 )[0]
 
 # 打印最终结果

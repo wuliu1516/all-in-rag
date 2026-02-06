@@ -1,12 +1,22 @@
 import json
 import os
 import numpy as np
-from pymilvus import connections, MilvusClient, FieldSchema, CollectionSchema, DataType, Collection, AnnSearchRequest, RRFRanker
+from pymilvus import (
+    connections,
+    MilvusClient,
+    FieldSchema,
+    CollectionSchema,
+    DataType,
+    Collection,
+    AnnSearchRequest,
+    RRFRanker,
+    WeightedRanker,
+)
 from pymilvus.model.hybrid import BGEM3EmbeddingFunction
 
 # 1. 初始化设置
 COLLECTION_NAME = "dragon_hybrid_demo"
-MILVUS_URI = "http://localhost:19530"  # 服务器模式
+MILVUS_URI = "http://localhost:19533"  # 服务器模式
 DATA_PATH = "../../data/C4/metadata/dragon.json"  # 相对路径
 BATCH_SIZE = 50
 
@@ -15,7 +25,8 @@ print(f"--> 正在连接到 Milvus: {MILVUS_URI}")
 connections.connect(uri=MILVUS_URI)
 
 print("--> 正在初始化 BGE-M3 嵌入模型...")
-ef = BGEM3EmbeddingFunction(use_fp16=False, device="cpu")
+model_path = "/home/app/.cache/huggingface/hub/models--BAAI--bge-m3/snapshots/5617a9f61b028005a4858fdac845db406aefb181"
+ef = BGEM3EmbeddingFunction(model_name=model_path, use_fp16=False, device="cpu")
 print(f"--> 嵌入模型初始化完成。密集向量维度: {ef.dim['dense']}")
 
 # 3. 创建 Collection
@@ -34,7 +45,7 @@ fields = [
     FieldSchema(name="location", dtype=DataType.VARCHAR, max_length=128),
     FieldSchema(name="environment", dtype=DataType.VARCHAR, max_length=64),
     FieldSchema(name="sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR),
-    FieldSchema(name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=ef.dim["dense"])
+    FieldSchema(name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=ef.dim["dense"]),
 ]
 
 # 如果集合不存在，则创建它及索引
@@ -62,24 +73,24 @@ collection.load()
 print(f"--> Collection '{COLLECTION_NAME}' 已加载到内存。")
 
 if collection.is_empty:
-    print(f"--> Collection 为空，开始插入数据...")
+    print("--> Collection 为空，开始插入数据...")
     if not os.path.exists(DATA_PATH):
         raise FileNotFoundError(f"数据文件未找到: {DATA_PATH}")
-    with open(DATA_PATH, 'r', encoding='utf-8') as f:
+    with open(DATA_PATH, "r", encoding="utf-8") as f:
         dataset = json.load(f)
 
     docs, metadata = [], []
     for item in dataset:
         parts = [
-            item.get('title', ''),
-            item.get('description', ''),
-            item.get('location', ''),
-            item.get('environment', ''),
+            item.get("title", ""),
+            item.get("description", ""),
+            item.get("location", ""),
+            item.get("environment", ""),
             # *item.get('combat_details', {}).get('combat_style', []),
             # *item.get('combat_details', {}).get('abilities_used', []),
             # item.get('scene_info', {}).get('time_of_day', '')
         ]
-        docs.append(' '.join(filter(None, parts)))
+        docs.append(" ".join(filter(None, parts)))
         metadata.append(item)
     print(f"--> 数据加载完成，共 {len(docs)} 条。")
 
@@ -96,24 +107,16 @@ if collection.is_empty:
     categories = [doc["category"] for doc in metadata]
     locations = [doc["location"] for doc in metadata]
     environments = [doc["environment"] for doc in metadata]
-    
+
     # 获取向量
     sparse_vectors = embeddings["sparse"]
     dense_vectors = embeddings["dense"]
-    
+
     # 插入数据
-    collection.insert([
-        img_ids,
-        paths,
-        titles,
-        descriptions,
-        categories,
-        locations,
-        environments,
-        sparse_vectors,
-        dense_vectors
-    ])
-    
+    collection.insert(
+        [img_ids, paths, titles, descriptions, categories, locations, environments, sparse_vectors, dense_vectors]
+    )
+
     collection.flush()
     print(f"--> 数据插入完成，总数: {collection.num_entities}")
 else:
@@ -143,7 +146,7 @@ print(f"稀疏向量非零元素数量: {sparse_vec.nnz}")
 print("稀疏向量前5个非零元素:")
 for i in range(min(5, sparse_vec.nnz)):
     print(f"  - 索引: {sparse_vec.indices[i]}, 值: {sparse_vec.data[i]:.4f}")
-density = (sparse_vec.nnz / sparse_vec.shape[1] * 100)
+density = sparse_vec.nnz / sparse_vec.shape[1] * 100
 print(f"\n稀疏向量密度: {density:.8f}%")
 
 # 定义搜索参数
@@ -157,7 +160,7 @@ dense_results = collection.search(
     param=search_params,
     limit=top_k,
     expr=search_filter,
-    output_fields=["title", "path", "description", "category", "location", "environment"]
+    output_fields=["title", "path", "description", "category", "location", "environment"],
 )[0]
 
 for i, hit in enumerate(dense_results):
@@ -172,7 +175,7 @@ sparse_results = collection.search(
     param=search_params,
     limit=top_k,
     expr=search_filter,
-    output_fields=["title", "path", "description", "category", "location", "environment"]
+    output_fields=["title", "path", "description", "category", "location", "environment"],
 )[0]
 
 for i, hit in enumerate(sparse_results):
@@ -183,6 +186,7 @@ for i, hit in enumerate(sparse_results):
 print("\n--- [混合] 稀疏+密集向量搜索结果 ---")
 # 创建 RRF 融合器
 rerank = RRFRanker(k=60)
+# rerank = WeightedRanker(0.6, 0.4)
 
 # 创建搜索请求
 dense_req = AnnSearchRequest([dense_vec], "dense_vector", search_params, limit=top_k)
@@ -193,7 +197,7 @@ results = collection.hybrid_search(
     [sparse_req, dense_req],
     rerank=rerank,
     limit=top_k,
-    output_fields=["title", "path", "description", "category", "location", "environment"]
+    output_fields=["title", "path", "description", "category", "location", "environment"],
 )[0]
 
 # 打印最终结果
