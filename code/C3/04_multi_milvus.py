@@ -150,7 +150,7 @@ for i, hit in enumerate(search_results):
     retrieved_images.append(hit["entity"]["image_path"])
 
 # 8. 可视化与清理
-print(f"\n--> 正在可视化结果并清理资源")
+print("\n--> 正在可视化结果并清理资源")
 if not retrieved_images:
     print("没有检索到任何图像。")
 else:

@@ -151,7 +151,7 @@ MODEL_PATH = "../../models/bge/Visualized_base_en_v1.5.pth"
 DATA_DIR = "../../data/C3/dragon"
 METADATA_PATH = "../../data/C4/metadata/dragon.json"
 COLLECTION_NAME = "multimodal_dragon_demo"
-MILVUS_URI = "http://localhost:19533"
+MILVUS_URI = "http://localhost:19530"
 
 # 2. 初始化数据集和编码器
 print("--> 正在初始化数据集...")

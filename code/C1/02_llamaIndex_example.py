@@ -18,7 +18,7 @@ index = VectorStoreIndex.from_documents(docs)
 query_engine = index.as_query_engine()
 
 print(query_engine.get_prompts())
-
+print("#" * 50)
 print(query_engine.query("文中举了哪些例子?"))
 print("*" * 50)
 print(query_engine.query("今天晚上吃什么?"))

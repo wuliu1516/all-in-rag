@@ -412,7 +412,7 @@ if __name__ == "__main__":
     DATA_DIR = "../../data/C3/dragon"
     METADATA_PATH = "../../data/C4/metadata/dragon.json"
     COLLECTION_NAME = "hybrid_multimodal_dragon_demo"
-    MILVUS_URI = "http://localhost:19533"
+    MILVUS_URI = "http://localhost:19530"
 
     # 创建混合多模态搜索系统
     searcher = HybridMultimodalSearcher(DATA_DIR, METADATA_PATH, COLLECTION_NAME, MILVUS_URI)
