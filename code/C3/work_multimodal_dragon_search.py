@@ -1,15 +1,16 @@
 import json
 import os
-from tqdm import tqdm
-from glob import glob
-import torch
-from visual_bge.visual_bge.modeling import Visualized_BGE
-from pymilvus import MilvusClient, FieldSchema, CollectionSchema, DataType
-import numpy as np
-import cv2
-from PIL import Image
-from typing import List, Dict, Any
 from dataclasses import dataclass
+from glob import glob
+from typing import Any, Dict, List
+
+import cv2
+import numpy as np
+import torch
+from PIL import Image
+from pymilvus import CollectionSchema, DataType, FieldSchema, MilvusClient
+from tqdm import tqdm
+from visual_bge.visual_bge.modeling import Visualized_BGE
 
 
 @dataclass

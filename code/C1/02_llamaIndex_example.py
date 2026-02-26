@@ -2,9 +2,9 @@ import os
 
 # os.environ['HF_ENDPOINT']='https://hf-mirror.com'
 from dotenv import load_dotenv
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
-from llama_index.llms.deepseek import DeepSeek
+from llama_index.core import Settings, SimpleDirectoryReader, VectorStoreIndex
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.deepseek import DeepSeek
 
 load_dotenv()
 

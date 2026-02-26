@@ -1,11 +1,13 @@
-from openai import OpenAI
 import os
+
+from openai import OpenAI
 
 # 初始化 OpenAI 客户端
 client = OpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     base_url="https://api.deepseek.com",
 )
+
 
 # 定义一个函数，用于发送消息并获取模型的响应
 def send_messages(messages, tools=None):
@@ -16,6 +18,7 @@ def send_messages(messages, tools=None):
         tool_choice="auto",  # 让模型自主决定是否调用工具
     )
     return response.choices[0].message
+
 
 # 1. 定义工具（函数）的 Schema
 tools = [
@@ -32,9 +35,9 @@ tools = [
                         "description": "城市和省份，例如：杭州市, 浙江省",
                     }
                 },
-                "required": ["location"]
+                "required": ["location"],
             },
-        }
+        },
     },
 ]
 

@@ -1,12 +1,19 @@
-import os
 import json
+import os
 import sqlite3
-import numpy as np
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
+from pymilvus import (
+    Collection,
+    CollectionSchema,
+    DataType,
+    FieldSchema,
+    MilvusClient,
+    connections,
+)
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from pymilvus import connections, MilvusClient, FieldSchema, CollectionSchema, DataType, Collection
 
 
 class BGESmallEmbeddingFunction:

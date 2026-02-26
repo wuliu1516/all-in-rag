@@ -1,20 +1,23 @@
-import os
 import asyncio
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
-from llama_index.core.node_parser import SentenceWindowNodeParser, SentenceSplitter
-from llama_index.llms.deepseek import DeepSeek
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.core.postprocessor import MetadataReplacementPostProcessor
+import os
+
+from llama_index.core import Settings, SimpleDirectoryReader, VectorStoreIndex
 from llama_index.core.evaluation import (
-    FaithfulnessEvaluator,
-    RelevancyEvaluator,
     BatchEvalRunner,
+    DatasetGenerator,
+    FaithfulnessEvaluator,
+    QueryResponseDataset,
+    RelevancyEvaluator,
 )
 from llama_index.core.evaluation.eval_utils import get_results_df
-from llama_index.core.evaluation import DatasetGenerator, QueryResponseDataset
+from llama_index.core.node_parser import SentenceSplitter, SentenceWindowNodeParser
+from llama_index.core.postprocessor import MetadataReplacementPostProcessor
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.deepseek import DeepSeek
 
 Settings.llm = DeepSeek(model="deepseek-chat", temperature=0.1, api_key=os.getenv("DEEPSEEK_API_KEY"))
 Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en")
+
 
 async def main():
     # 1. 加载文档
@@ -31,8 +34,6 @@ async def main():
         response_eval_dataset = await dataset_generator.agenerate_dataset_from_nodes(num=15)  # 减少问题数量
         response_eval_dataset.save_json("./c6_response_eval_dataset.json")
 
-
-
     # 2. 构建两种不同的RAG查询引擎和检索器进行对比
     # 2.1 句子窗口检索
     sentence_parser = SentenceWindowNodeParser.from_defaults(
@@ -45,9 +46,7 @@ async def main():
 
     sentence_query_engine = sentence_index.as_query_engine(
         similarity_top_k=2,
-        node_postprocessors=[
-            MetadataReplacementPostProcessor(target_metadata_key="window")
-        ],
+        node_postprocessors=[MetadataReplacementPostProcessor(target_metadata_key="window")],
     )
     sentence_retriever = sentence_index.as_retriever(similarity_top_k=2)
 
@@ -78,14 +77,12 @@ async def main():
     # 常规分块检索响应评估
     print("\n=== 评估常规分块检索 ===")
     base_runner = BatchEvalRunner(evaluators, workers=2, show_progress=True)
-    base_response_results = await base_runner.aevaluate_queries(
-        queries=queries, query_engine=base_query_engine
-    )
+    base_response_results = await base_runner.aevaluate_queries(queries=queries, query_engine=base_query_engine)
 
     # 5. 分析并打印对比结果
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("响应评估结果对比")
-    print("="*60)
+    print("=" * 60)
 
     def calc_response_score(results, metric):
         if results and results.get(metric):
@@ -109,8 +106,6 @@ async def main():
     print(f"  忠实度: {base_faith:.1%}")
     print(f"  相关性: {base_rel:.1%}")
 
-
-
     # 简单对比
     if sentence_faith > base_faith and sentence_rel > base_rel:
         print(f"\n✅ 句子窗口检索在两个维度上都优于常规分块检索")
@@ -118,7 +113,6 @@ async def main():
         print(f"\n⚖️  句子窗口检索在某些维度上有优势")
     else:
         print(f"\n❌ 句子窗口检索未显示明显优势")
-
 
 
 if __name__ == "__main__":

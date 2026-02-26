@@ -1,21 +1,21 @@
-from typing import List
 import os
-from langchain_core.prompts import PromptTemplate
-from pydantic import BaseModel, Field
+from typing import List
+
 from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate
 from langchain_deepseek import ChatDeepSeek
+from pydantic import BaseModel, Field
 
 # 初始化 LLM
-llm = ChatDeepSeek(
-    model="deepseek-chat",
-    api_key=os.getenv("DEEPSEEK_API_KEY")
-)
+llm = ChatDeepSeek(model="deepseek-chat", api_key=os.getenv("DEEPSEEK_API_KEY"))
+
 
 # 1. 定义数据结构
 class PersonInfo(BaseModel):
     name: str = Field(description="人物姓名")
     age: int = Field(description="人物年龄")
     skills: List[str] = Field(description="技能列表")
+
 
 # 2. 创建解析器
 parser = PydanticOutputParser(pydantic_object=PersonInfo)

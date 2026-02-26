@@ -11,12 +11,12 @@ from langchain.retrievers.document_compressors import (
 
 # 导入ColBERT重排器需要的模块
 from langchain.retrievers.document_compressors.base import BaseDocumentCompressor
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
-from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_deepseek import ChatDeepSeek
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from transformers import AutoModel, AutoTokenizer
 
 
@@ -112,7 +112,7 @@ class ColBERTReranker(BaseDocumentCompressor):
 
 
 # 初始化配置
-hf_bge_embeddings = HuggingFaceBgeEmbeddings(model_name="BAAI/bge-large-zh-v1.5")
+hf_bge_embeddings = HuggingFaceEmbeddings(model_name="BAAI/bge-large-zh-v1.5")
 
 llm = ChatDeepSeek(model="deepseek-chat", temperature=0.1, api_key=os.getenv("DEEPSEEK_API_KEY"))
 

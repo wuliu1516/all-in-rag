@@ -1,5 +1,7 @@
-import requests
 from pathlib import Path
+
+import requests
+
 
 def download_visualized_bge_model():
     """
@@ -30,10 +32,10 @@ def download_visualized_bge_model():
         response.raise_for_status()
 
         # 获取文件大小
-        total_size = int(response.headers.get('content-length', 0))
+        total_size = int(response.headers.get("content-length", 0))
         downloaded_size = 0
 
-        with open(model_file, 'wb') as f:
+        with open(model_file, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
                     f.write(chunk)
@@ -42,7 +44,10 @@ def download_visualized_bge_model():
                     # 显示下载进度
                     if total_size > 0:
                         progress = (downloaded_size / total_size) * 100
-                        print(f"\r下载进度: {progress:.1f}% ({downloaded_size/(1024*1024):.1f}/{total_size/(1024*1024):.1f} MB)", end='')
+                        print(
+                            f"\r下载进度: {progress:.1f}% ({downloaded_size/(1024*1024):.1f}/{total_size/(1024*1024):.1f} MB)",
+                            end="",
+                        )
 
         print(f"\n模型下载完成: {model_file}")
         print(f"文件大小: {model_file.stat().st_size / (1024*1024):.1f} MB")
@@ -59,6 +64,7 @@ def download_visualized_bge_model():
         if model_file.exists():
             model_file.unlink()
         return None
+
 
 if __name__ == "__main__":
     model_path = download_visualized_bge_model()

@@ -1,12 +1,13 @@
 import os
-from tqdm import tqdm
 from glob import glob
-import torch
-from visual_bge.visual_bge.modeling import Visualized_BGE
-from pymilvus import MilvusClient, FieldSchema, CollectionSchema, DataType
-import numpy as np
+
 import cv2
+import numpy as np
+import torch
 from PIL import Image
+from pymilvus import CollectionSchema, DataType, FieldSchema, MilvusClient
+from tqdm import tqdm
+from visual_bge.visual_bge.modeling import Visualized_BGE
 
 # 1. 初始化设置
 MODEL_NAME = "BAAI/bge-base-en-v1.5"
@@ -15,9 +16,11 @@ DATA_DIR = "../../data/C3"
 COLLECTION_NAME = "multimodal_demo"
 MILVUS_URI = "http://localhost:19530"
 
+
 # 2. 定义工具 (编码器和可视化函数)
 class Encoder:
     """编码器类，用于将图像和文本编码为向量。"""
+
     def __init__(self, model_name: str, model_path: str):
         self.model = Visualized_BGE(model_name_bge=model_name, model_weight=model_path)
         self.model.eval()
@@ -32,7 +35,10 @@ class Encoder:
             query_emb = self.model.encode(image=image_path)
         return query_emb.tolist()[0]
 
-def visualize_results(query_image_path: str, retrieved_images: list, img_height: int = 300, img_width: int = 300, row_count: int = 3) -> np.ndarray:
+
+def visualize_results(
+    query_image_path: str, retrieved_images: list, img_height: int = 300, img_width: int = 300, row_count: int = 3
+) -> np.ndarray:
     """从检索到的图像列表创建一个全景图用于可视化。"""
     panoramic_width = img_width * row_count
     panoramic_height = img_height * row_count
@@ -44,24 +50,27 @@ def visualize_results(query_image_path: str, retrieved_images: list, img_height:
     query_cv = np.array(query_pil)[:, :, ::-1]
     resized_query = cv2.resize(query_cv, (img_width, img_height))
     bordered_query = cv2.copyMakeBorder(resized_query, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=(255, 0, 0))
-    query_display_area[img_height * (row_count - 1):, :] = cv2.resize(bordered_query, (img_width, img_height))
+    query_display_area[img_height * (row_count - 1) :, :] = cv2.resize(bordered_query, (img_width, img_height))
     cv2.putText(query_display_area, "Query", (10, panoramic_height - 20), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
     # 处理检索到的图像
     for i, img_path in enumerate(retrieved_images):
         row, col = i // row_count, i % row_count
         start_row, start_col = row * img_height, col * img_width
-        
+
         retrieved_pil = Image.open(img_path).convert("RGB")
         retrieved_cv = np.array(retrieved_pil)[:, :, ::-1]
         resized_retrieved = cv2.resize(retrieved_cv, (img_width - 4, img_height - 4))
         bordered_retrieved = cv2.copyMakeBorder(resized_retrieved, 2, 2, 2, 2, cv2.BORDER_CONSTANT, value=(0, 0, 0))
-        panoramic_image[start_row:start_row + img_height, start_col:start_col + img_width] = bordered_retrieved
-        
+        panoramic_image[start_row : start_row + img_height, start_col : start_col + img_width] = bordered_retrieved
+
         # 添加索引号
-        cv2.putText(panoramic_image, str(i), (start_col + 10, start_row + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv2.putText(
+            panoramic_image, str(i), (start_col + 10, start_row + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2
+        )
 
     return np.hstack([query_display_area, panoramic_image])
+
 
 # 3. 初始化客户端
 print("--> 正在初始化编码器和Milvus客户端...")
@@ -111,10 +120,7 @@ if data_to_insert:
 print(f"\n--> 正在为 '{COLLECTION_NAME}' 创建索引")
 index_params = milvus_client.prepare_index_params()
 index_params.add_index(
-    field_name="vector",
-    index_type="HNSW",
-    metric_type="COSINE",
-    params={"M": 16, "efConstruction": 256}
+    field_name="vector", index_type="HNSW", metric_type="COSINE", params={"M": 16, "efConstruction": 256}
 )
 milvus_client.create_index(collection_name=COLLECTION_NAME, index_params=index_params)
 print("成功为向量字段创建 HNSW 索引。")
@@ -134,14 +140,14 @@ search_results = milvus_client.search(
     data=[query_vector],
     output_fields=["image_path"],
     limit=5,
-    search_params={"metric_type": "COSINE", "params": {"ef": 128}}
+    search_params={"metric_type": "COSINE", "params": {"ef": 128}},
 )[0]
 
 retrieved_images = []
 print("检索结果:")
 for i, hit in enumerate(search_results):
     print(f"  Top {i+1}: ID={hit['id']}, 距离={hit['distance']:.4f}, 路径='{hit['entity']['image_path']}'")
-    retrieved_images.append(hit['entity']['image_path'])
+    retrieved_images.append(hit["entity"]["image_path"])
 
 # 8. 可视化与清理
 print(f"\n--> 正在可视化结果并清理资源")

@@ -4,11 +4,11 @@ import os
 # os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 from dotenv import load_dotenv
 from langchain_community.document_loaders import UnstructuredMarkdownLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_deepseek import ChatDeepSeek
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
 
@@ -34,15 +34,15 @@ vectorstore.add_documents(chunks)
 # 提示词模板
 prompt = ChatPromptTemplate.from_template(
     """请根据下面提供的上下文信息来回答问题。
-请确保你的回答完全基于这些上下文。
-如果上下文中没有足够的信息来回答问题，请直接告知：“抱歉，我无法根据提供的上下文找到相关信息来回答此问题。”
+    请确保你的回答完全基于这些上下文。
+    如果上下文中没有足够的信息来回答问题，请直接告知：“抱歉，我无法根据提供的上下文找到相关信息来回答此问题。”
 
-上下文:
-{context}
+    上下文:
+    {context}
 
-问题: {question}
+    问题: {question}
 
-回答:"""
+    回答:"""
 )
 
 # 配置大语言模型

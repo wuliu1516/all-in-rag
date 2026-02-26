@@ -1,7 +1,7 @@
 import os
 from typing import List, Dict, Any
 from langchain_deepseek import ChatDeepSeek
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 
 
 class SimpleSQLGenerator:

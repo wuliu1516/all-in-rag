@@ -1,13 +1,13 @@
-import os
-from langchain_deepseek import ChatDeepSeek
-from langchain_community.document_loaders import BiliBiliLoader
-from langchain.chains.query_constructor.schema import AttributeInfo
-from langchain.retrievers.self_query.base import SelfQueryRetriever
-from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 import logging
+import os
 
 import requests
+from langchain.chains.query_constructor.base import AttributeInfo
+from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_community.document_loaders import BiliBiliLoader
+from langchain_community.vectorstores import Chroma
+from langchain_deepseek import ChatDeepSeek
+from langchain_huggingface import HuggingFaceEmbeddings
 
 logging.basicConfig(level=logging.INFO)
 

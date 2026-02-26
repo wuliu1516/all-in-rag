@@ -1,6 +1,6 @@
-from langchain_experimental.text_splitter import SemanticChunker
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.document_loaders import TextLoader
+from langchain_experimental.text_splitter import SemanticChunker
+from langchain_huggingface import HuggingFaceEmbeddings
 
 embeddings = HuggingFaceEmbeddings(
     model_name="BAAI/bge-small-zh-v1.5", model_kwargs={"device": "cpu"}, encode_kwargs={"normalize_embeddings": True}

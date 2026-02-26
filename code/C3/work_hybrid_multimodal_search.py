@@ -1,24 +1,25 @@
 import json
 import os
-from tqdm import tqdm
+from dataclasses import dataclass
+from typing import Any, Dict, List
+
+import cv2
+import numpy as np
 import torch
-from visual_bge.visual_bge.modeling import Visualized_BGE
+from PIL import Image
 from pymilvus import (
-    connections,
-    MilvusClient,
-    FieldSchema,
+    AnnSearchRequest,
+    Collection,
     CollectionSchema,
     DataType,
-    Collection,
-    AnnSearchRequest,
+    FieldSchema,
+    MilvusClient,
     RRFRanker,
+    connections,
 )
 from pymilvus.model.hybrid import BGEM3EmbeddingFunction
-import numpy as np
-import cv2
-from PIL import Image
-from typing import List, Dict, Any
-from dataclasses import dataclass
+from tqdm import tqdm
+from visual_bge.visual_bge.modeling import Visualized_BGE
 
 
 @dataclass

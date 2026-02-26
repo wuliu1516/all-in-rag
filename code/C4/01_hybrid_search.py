@@ -1,16 +1,17 @@
 import json
 import os
+
 import numpy as np
 from pymilvus import (
-    connections,
-    MilvusClient,
-    FieldSchema,
+    AnnSearchRequest,
+    Collection,
     CollectionSchema,
     DataType,
-    Collection,
-    AnnSearchRequest,
+    FieldSchema,
+    MilvusClient,
     RRFRanker,
     WeightedRanker,
+    connections,
 )
 from pymilvus.model.hybrid import BGEM3EmbeddingFunction
 
