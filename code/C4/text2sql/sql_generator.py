@@ -22,18 +22,18 @@ class SimpleSQLGenerator:
         # 构建提示
         prompt = f"""你是一个SQL专家。请根据以下信息将用户问题转换为SQL查询语句。
 
-数据库信息：
-{context}
+        数据库信息：
+        {context}
 
-用户问题：{user_query}
+        用户问题：{user_query}
 
-要求：
-1. 只返回SQL语句，不要包含任何解释
-2. 确保SQL语法正确
-3. 使用上下文中提供的表名和字段名
-4. 如果需要JOIN，请根据表结构进行合理关联
+        要求：
+        1. 只返回SQL语句，不要包含任何解释
+        2. 确保SQL语法正确
+        3. 使用上下文中提供的表名和字段名
+        4. 如果需要JOIN，请根据表结构进行合理关联
 
-SQL语句："""
+        SQL语句："""
 
         messages = [HumanMessage(content=prompt)]
         response = self.llm.invoke(messages)

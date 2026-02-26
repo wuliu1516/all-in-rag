@@ -43,7 +43,7 @@ class BGESmallEmbeddingFunction:
 class SimpleKnowledgeBase:
     """简化的知识库，使用BGE-Small进行向量检索"""
 
-    def __init__(self, milvus_uri: str = "http://localhost:19533"):
+    def __init__(self, milvus_uri: str = "http://localhost:19530"):
         self.milvus_uri = milvus_uri
         self.collection_name = "text2sql_knowledge_base"
         self.milvus_client = None
