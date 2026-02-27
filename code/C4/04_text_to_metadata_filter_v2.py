@@ -61,18 +61,18 @@ for query in queries:
     # 使用大模型将自然语言转换为排序指令
     prompt = f"""你是一个智能助手，请将用户的问题转换成一个用于排序视频的JSON指令。
 
-你需要识别用户想要排序的字段和排序方向。
-- 排序字段必须是 'view_count' (观看次数) 或 'length' (时长) 之一。
-- 排序方向必须是 'asc' (升序) 或 'desc' (降序) 之一。
+    你需要识别用户想要排序的字段和排序方向。
+    - 排序字段必须是 'view_count' (观看次数) 或 'length' (时长) 之一。
+    - 排序方向必须是 'asc' (升序) 或 'desc' (降序) 之一。
 
-例如:
-- '时间最短的视频' 或 '哪个视频时间最短' 应转换为 {{"sort_by": "length", "order": "asc"}}
-- '播放量最高的视频' 或 '哪个视频最火' 应转换为 {{"sort_by": "view_count", "order": "desc"}}
+    例如:
+    - '时间最短的视频' 或 '哪个视频时间最短' 应转换为 {{"sort_by": "length", "order": "asc"}}
+    - '播放量最高的视频' 或 '哪个视频最火' 应转换为 {{"sort_by": "view_count", "order": "desc"}}
 
-请根据以下问题生成JSON指令:
-原始问题: "{query}"
+    请根据以下问题生成JSON指令:
+    原始问题: "{query}"
 
-JSON指令:"""
+    JSON指令:"""
 
     response = client.chat.completions.create(
         model="deepseek-chat",
