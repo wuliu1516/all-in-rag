@@ -1,10 +1,8 @@
 import logging
 import os
 
-from langchain.chains.query_constructor.base import AttributeInfo
 from langchain_community.document_loaders import BiliBiliLoader
 from langchain_community.vectorstores import Chroma
-from langchain_deepseek import ChatDeepSeek
 from langchain_huggingface import HuggingFaceEmbeddings
 from openai import OpenAI
 
@@ -33,7 +31,7 @@ try:
             "view_count": original.get("stat", {}).get("view", 0),
             "length": original.get("duration", 0),
         }
-
+        print(f"data:{metadata}")
         doc.metadata = metadata
         bili.append(doc)
 
@@ -48,27 +46,7 @@ if not bili:
 embed_model = HuggingFaceEmbeddings(model_name="BAAI/bge-small-zh-v1.5")
 vectorstore = Chroma.from_documents(bili, embed_model)
 
-# 3. 配置元数据字段信息
-metadata_field_info = [
-    AttributeInfo(
-        name="title",
-        description="视频标题（字符串）",
-        type="string",
-    ),
-    AttributeInfo(
-        name="author",
-        description="视频作者（字符串）",
-        type="string",
-    ),
-    AttributeInfo(
-        name="view_count",
-        description="视频观看次数（整数）",
-        type="integer",
-    ),
-    AttributeInfo(name="length", description="视频长度（整数）", type="integer"),
-]
-
-# 4. 初始化LLM客户端
+# 3. 初始化LLM客户端
 client = OpenAI(base_url="https://api.deepseek.com", api_key=os.getenv("DEEPSEEK_API_KEY"))
 
 # 5. 获取所有文档用于排序
@@ -107,6 +85,9 @@ JSON指令:"""
         import json
 
         instruction_str = response.choices[0].message.content
+        if instruction_str is None:
+            print("LLM 返回内容为空")
+            continue
         instruction = json.loads(instruction_str)
         print(f"--- 生成的排序指令: {instruction} ---")
 
